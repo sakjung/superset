@@ -126,6 +126,10 @@ setup(
         "wtforms>=2.3.3, <2.4",
         "wtforms-json",
         "xlsxwriter>=3.0.7, <3.1",
+        "xmlsec>=1.3.13",
+        "lxml>=4.9.3",
+        "isodate>=0.6.1",
+        "python3-saml>=1.15.0",
     ],
     extras_require={
         "athena": ["pyathena[pandas]>=2, <3"],

@@ -27,6 +27,10 @@ from typing import Optional
 
 from cachelib.file import FileSystemCache
 from celery.schedules import crontab
+from flask_appbuilder.security.manager import AUTH_DB
+from flask_login import LoginManager
+
+from superset.security import SupersetSecurityManager
 
 logger = logging.getLogger()
 
@@ -66,18 +70,44 @@ REDIS_HOST = get_env_variable("REDIS_HOST")
 REDIS_PORT = get_env_variable("REDIS_PORT")
 REDIS_CELERY_DB = get_env_variable("REDIS_CELERY_DB", "0")
 REDIS_RESULTS_DB = get_env_variable("REDIS_RESULTS_DB", "1")
+REDIS_DATA_CACHE_DB = get_env_variable("REDIS_RESULTS_DB", "2")
+REDIS_FILTER_STATE_CACHE_DB = get_env_variable("REDIS_RESULTS_DB", "3")
+REDIS_EXPLORE_FORM_DATA_CACHE_DB = get_env_variable("REDIS_RESULTS_DB", "4")
 
 RESULTS_BACKEND = FileSystemCache("/app/superset_home/sqllab")
 
 CACHE_CONFIG = {
-    "CACHE_TYPE": "redis",
-    "CACHE_DEFAULT_TIMEOUT": 300,
-    "CACHE_KEY_PREFIX": "superset_",
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400,
+    "CACHE_KEY_PREFIX": "superset_cache_",
     "CACHE_REDIS_HOST": REDIS_HOST,
     "CACHE_REDIS_PORT": REDIS_PORT,
     "CACHE_REDIS_DB": REDIS_RESULTS_DB,
 }
-DATA_CACHE_CONFIG = CACHE_CONFIG
+DATA_CACHE_CONFIG = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400,
+    "CACHE_KEY_PREFIX": "superset_data_",
+    "CACHE_REDIS_HOST": REDIS_HOST,
+    "CACHE_REDIS_PORT": REDIS_PORT,
+    "CACHE_REDIS_DB": REDIS_DATA_CACHE_DB,
+}
+FILTER_STATE_CACHE_CONFIG = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400,
+    "CACHE_KEY_PREFIX": "superset_filter_",
+    "CACHE_REDIS_HOST": REDIS_HOST,
+    "CACHE_REDIS_PORT": REDIS_PORT,
+    "CACHE_REDIS_DB": REDIS_FILTER_STATE_CACHE_DB,
+}
+EXPLORE_FORM_DATA_CACHE_CONFIG = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400,
+    "CACHE_KEY_PREFIX": "superset_explore_",
+    "CACHE_REDIS_HOST": REDIS_HOST,
+    "CACHE_REDIS_PORT": REDIS_PORT,
+    "CACHE_REDIS_DB": REDIS_EXPLORE_FORM_DATA_CACHE_DB,
+}
 
 
 class CeleryConfig(object):
@@ -100,13 +130,62 @@ class CeleryConfig(object):
 
 CELERY_CONFIG = CeleryConfig
 
-FEATURE_FLAGS = {"ALERT_REPORTS": True}
+FEATURE_FLAGS = {
+    "ALERT_REPORTS": True,
+    "CLIENT_CACHE": True,
+    "ENABLE_EXPLORE_JSON_CSRF_PROTECTION": False,
+    "PRESTO_EXPAND_DATA": True,
+}
 ALERT_REPORTS_NOTIFICATION_DRY_RUN = True
 WEBDRIVER_BASEURL = "http://superset:8088/"
 # The base URL for the email report hyperlinks.
 WEBDRIVER_BASEURL_USER_FRIENDLY = WEBDRIVER_BASEURL
 
+# SQL LAB
 SQLLAB_CTAS_NO_LIMIT = True
+SQLLAB_TIMEOUT = int(timedelta(seconds=60).total_seconds())
+
+# Logging
+ENABLE_TIME_ROTATE = True
+
+SECRET_KEY = "YOUR_OWN_RANDOM_GENERATED_SECRET_KEY"
+
+# Set the authentication type to OAuth
+AUTH_TYPE = AUTH_DB
+# Will allow user self registration, allowing to create Flask users from Authorized User
+AUTH_USER_REGISTRATION = True
+# The default user self registration role
+# Can change it to Gamma if want user to have dashboard view
+AUTH_USER_REGISTRATION_ROLE = "Gamma"
+SAML_PATH = "/app/superset_home/saml"
+LOGOUT_REDIRECT_URL = "https://{DASHBOARD_DOMAIN}/saml/acs"
+
+# Add endpoints that need to be exempt from CSRF protection
+WTF_CSRF_EXEMPT_LIST = [
+    "superset.views.core.log",
+    "superset.views.core.explore_json",
+    "superset.charts.data.api.data",
+
+    "superset.views.saml.assertion_consumer_service",
+    "superset.views.saml.single_sign_on",
+    "superset.views.saml.single_logout",
+    "superset.views.saml.single_logout_service",
+    "superset.views.saml.metadata"
+]
+ENABLE_PROXY_FIX = True
+
+class RecoSupersetSecurityManager(SupersetSecurityManager):
+    def __init__(self, appbuilder):
+        super(RecoSupersetSecurityManager, self).__init__(appbuilder)
+
+    def create_login_manager(self, app) -> LoginManager:
+        lm = super().create_login_manager(app)
+        lm.login_view = "https://{DASHBOARD_DOMAIN}/saml/acs"
+        lm.refresh_view = "https://{DASHBOARD_DOMAIN}/saml/acs"
+        return lm
+
+
+CUSTOM_SECURITY_MANAGER = RecoSupersetSecurityManager
 
 #
 # Optionally import superset_config_docker.py (which will have been included on

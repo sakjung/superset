@@ -26,8 +26,8 @@ gunicorn \
     --workers ${SERVER_WORKER_AMOUNT:-1} \
     --worker-class ${SERVER_WORKER_CLASS:-gthread} \
     --threads ${SERVER_THREADS_AMOUNT:-20} \
-    --timeout ${GUNICORN_TIMEOUT:-60} \
-    --keep-alive ${GUNICORN_KEEPALIVE:-2} \
+    --timeout ${GUNICORN_TIMEOUT:-300} \
+    --keep-alive ${GUNICORN_KEEPALIVE:-65} \
     --max-requests ${WORKER_MAX_REQUESTS:-0} \
     --max-requests-jitter ${WORKER_MAX_REQUESTS_JITTER:-0} \
     --limit-request-line ${SERVER_LIMIT_REQUEST_LINE:-0} \

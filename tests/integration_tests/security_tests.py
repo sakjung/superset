@@ -1600,6 +1600,11 @@ class TestRolePermission(SupersetTestCase):
             ["SecurityApi", "login"],
             ["SecurityApi", "refresh"],
             ["SupersetIndexView", "index"],
+            ["SAMLView", "assertion_consumer_service"],
+            ["SAMLView", "single_sign_on"],
+            ["SAMLView", "single_logout"],
+            ["SAMLView", "single_logout_service"],
+            ["SAMLView", "metadata"],
         ]
         unsecured_views = []
         for view_class in appbuilder.baseviews:
